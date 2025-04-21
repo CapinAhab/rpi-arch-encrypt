@@ -16,12 +16,13 @@ parted /dev/mmcblk0 mkpart primary ext4 257M 100%
 
 
 #Setup encrypted root
-cryptsetup luksFormat /dev/mmcblk0p2
+#cryptsetup luksFormat /dev/mmcblk0p2
+cryptsetup --type luks2 --cipher xchacha20,aes-adiantum-plain64 luksFormat /dev/mmcblk0p2
 cryptsetup luksOpen /dev/mmcblk0p2 rpiroot
 
 #Setup logical volumes
 vgcreate rpiroot /dev/mapper/rpiroot
-lvcreate --name swap -L 512M rpiroot
+lvcreate --name swap -L 1G rpiroot
 lvcreate --name root -l 100%FREE rpiroot
 
 #Create filesystems 
@@ -66,9 +67,9 @@ echo "initramfs initrd.img followkernel" >> /mnt/boot/config.txt
 
 
 #Unmount partitions
-#umount /mnt/boot
-#umount /mnt
+umount /mnt/boot
+umount /mnt
 
 
 #Close luks partition
-#cryptsetup luksClose /dev/mapper/rpiroot
+cryptsetup luksClose /dev/mapper/rpiroot
