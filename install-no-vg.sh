@@ -21,17 +21,19 @@ cryptsetup luksFormat /dev/mmcblk0p2
 cryptsetup luksOpen /dev/mmcblk0p2 rpiroot
 
 #Setup logical volumes
-vgcreate rpiroot /dev/mapper/rpiroot
-lvcreate --name swap -L 1G rpiroot
-lvcreate --name root -l 100%FREE rpiroot
+#vgcreate rpiroot /dev/mapper/rpiroot
+#lvcreate --name swap -L 1G rpiroot
+#lvcreate --name root -l 100%FREE rpiroot
 
 #Create filesystems 
 mkfs.fat /dev/mmcblk0p1
-mkfs.ext4 /dev/rpiroot/root
-mkswap /dev/rpiroot/swap
+
+mkfs.ext4 /dev/mapper/rpiroot
+#mkfs.ext4 /dev/rpiroot/root
+#mkswap /dev/rpiroot/swap
 
 #Mount partitions for installation
-mount /dev/rpiroot/root /mnt
+mount /dev/mapper/rpiroot /mnt
 mkdir /mnt/boot
 mount /dev/mmcblk0p1 /mnt/boot
 
