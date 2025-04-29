@@ -50,9 +50,16 @@ cp /etc/resolv.conf /mnt/etc/
 #Give hooks to mkinitcpio
 cp configs/mkinitcpio.conf /mnt/etc/mkinitcpio.conf
 
+#replace Uboots default envs so vg root partition is used
+cp configs/boot.txt /mnt/boot/boot.txt
+cp configs/boot.scr /mnt/boot/boot.scr
+
 #Setup arch arm repos
 xchroot /mnt pacman-key --init
 xchroot /mnt pacman-key --populate archlinuxarm
+
+#Manually get mirror list to avios script breaking timeout errors
+xchroot wget http://mirror.archlinuxarm.org/aarch64/community/community.db -O /var/lib/pacman/sync/community.db
 
 
 #Install requirements on the encrypted system
@@ -64,7 +71,8 @@ xchroot mkinitcpio -P
 #Setup boot options
 echo "initramfs initrd.img followkernel" >> /mnt/boot/config.txt
 
-
+#replace Uboots default envs so vg root partition is used
+cp configs/boot.txt /mnt/boot/boot.txt
 
 #Unmount partitions
 umount /mnt/boot

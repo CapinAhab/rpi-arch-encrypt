@@ -17,7 +17,7 @@ parted /dev/mmcblk0 mkpart primary ext4 257M 100%
 
 #Setup encrypted root
 #cryptsetup luksFormat /dev/mmcblk0p2
-cryptsetup luksFormat /dev/mmcblk0p2
+cryptsetup --type luks2 --cipher xchacha20,aes-adiantum-plain64 luksFormat /dev/mmcblk0p2
 cryptsetup luksOpen /dev/mmcblk0p2 rpiroot
 
 #Setup logical volumes
@@ -28,9 +28,7 @@ cryptsetup luksOpen /dev/mmcblk0p2 rpiroot
 #Create filesystems 
 mkfs.fat /dev/mmcblk0p1
 
-mkfs.ext4 /dev/mapper/rpiroot
-#mkfs.ext4 /dev/rpiroot/root
-#mkswap /dev/rpiroot/swap
+mkfs.btrfs /dev/mapper/rpiroot
 
 #Mount partitions for installation
 mount /dev/mapper/rpiroot /mnt
@@ -41,7 +39,10 @@ tar xvfp ArchLinuxARM-rpi-aarch64-latest.tar.gz -C /mnt #install system
 rm ArchLinuxARM-rpi-aarch64-latest.tar.gz
 
 #Create fstab
-cp configs/fstab /mnt/etc/fstab
+cp configs/fstab-no-vg /mnt/etc/fstab
+
+#Setup crypttab
+cp configs/crypttab /mnt/etc/crypttab
 
 #Cant overwrite resolv.conf so have to remove it
 rm /mnt/etc/resolv.conf
