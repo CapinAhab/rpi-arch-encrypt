@@ -17,7 +17,7 @@ parted /dev/mmcblk0 mkpart primary ext4 257M 100%
 
 #Setup encrypted root
 #cryptsetup luksFormat /dev/mmcblk0p2
-cryptsetup luksFormat /dev/mmcblk0p2
+cryptsetup --type luks2 --cipher xchacha20,aes-adiantum-plain64 luksFormat /dev/mmcblk0p2
 cryptsetup luksOpen /dev/mmcblk0p2 rpiroot
 
 #Setup logical volumes
@@ -25,9 +25,15 @@ vgcreate rpiroot /dev/mapper/rpiroot
 lvcreate --name swap -L 1G rpiroot
 lvcreate --name root -l 100%FREE rpiroot
 
+#Get partition uuids
+boot_part=lsblk -o uuid /dev/mmcblk0p1 | sed -n '2p'
+crypt_part=lsblk -o uuid /dev/mmcblk0p2 | sed -n '2p'
+root_part=lsblk -o uuid /dev/rpiroot/swap | sed -n '2p'
+swap_part=lsblk -o uuid /dev/rpiroot/root | sed -n '2p'
+
 #Create filesystems 
 mkfs.fat /dev/mmcblk0p1
-mkfs.ext4 /dev/rpiroot/root
+mkfs.btrfs /dev/rpiroot/root
 mkswap /dev/rpiroot/swap
 
 #Mount partitions for installation
@@ -38,8 +44,16 @@ mount /dev/mmcblk0p1 /mnt/boot
 tar xvfp ArchLinuxARM-rpi-aarch64-latest.tar.gz -C /mnt #install system
 rm ArchLinuxARM-rpi-aarch64-latest.tar.gz
 
-#Create fstab
-cp configs/fstab /mnt/etc/fstab
+#Update fstab
+echo $(lsblk -o uuid /dev/rpiroot/swap | sed -n '2p')	/              	btrfs      	rw        	0 1 >> /mnt/etc/fstab
+echo $(lsblk -o uuid /dev/rpiroot/root | sed -n '2p')	none           	swap      	defaults  	0 0 >> /mnt/etc/fstab
+
+#echo $boot_part	/boot           	vfat      	rw,defaults  	0 0 >> /mnt/etc/fstab
+
+
+#Update crypttab
+touch /mnt/etc/crypttab
+echo rpiroot	$(lsblk -o uuid /dev/mmcblk0p2 | sed -n '2p')	none        luks >> /mnt/etc/crypttab
 
 #Cant overwrite resolv.conf so have to remove it
 rm /mnt/etc/resolv.conf
@@ -51,8 +65,8 @@ cp /etc/resolv.conf /mnt/etc/
 cp configs/mkinitcpio.conf /mnt/etc/mkinitcpio.conf
 
 #replace Uboots default envs so vg root partition is used
-cp configs/boot.txt /mnt/boot/boot.txt
-cp configs/boot.scr /mnt/boot/boot.scr
+sed -i '6s/.*/setenv bootargs console=ttyS1,115200 console=tty0 cryptdevice=PARTUUID=$(lsblk -o uuid /dev/mmcblk0p2 | sed -n '2p') root=PARTUUID=$(lsblk -o uuid /dev/rpiroot/root | sed -n '2p') rw rootwait smsc95xx.macaddr="${usbethaddr}"/' /mnt/boot/boot.scr
+sed -i '6s/.*/setenv bootargs console=ttyS1,115200 console=tty0 cryptdevice=PARTUUID=$(lsblk -o uuid /dev/mmcblk0p2 | sed -n '2p') root=PARTUUID=$(lsblk -o uuid /dev/rpiroot/root | sed -n '2p') rw rootwait smsc95xx.macaddr="${usbethaddr}"/' /mnt/boot/boot.txt
 
 #Setup arch arm repos
 xchroot /mnt pacman-key --init
